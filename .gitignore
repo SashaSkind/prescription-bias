@@ -8,6 +8,9 @@ data/
 .env
 *.local
 
+# CDC pipe watermark (local sync state)
+.pipe_watermark
+
 # Python
 __pycache__/
 *.pyc
