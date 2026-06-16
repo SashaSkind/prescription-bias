@@ -33,17 +33,32 @@ CLICKHOUSE_PASSWORD=<the read-only webapp password>
 
 ## Deploy
 
-### Option 1 — Google Cloud Run (recommended: scales to zero, ~free idle)
+### Option 1 — Google Cloud Run (recommended: scales to zero, $0 at demo volume)
+Run from the **repo root**. `--max-instances 2` caps spend if the open URL gets hit by a bot;
+scale-to-zero is the default (`min-instances` unset = 0), so idle costs nothing.
 ```bash
 gcloud run deploy pharma-mcp \
   --source mcp \
   --region us-central1 \
   --allow-unauthenticated \
   --port 8080 \
+  --max-instances 2 \
   --set-env-vars CLICKHOUSE_HOST=rzxwreav7j.us-west-2.aws.clickhouse.cloud,CLICKHOUSE_USER=webapp,CLICKHOUSE_DATABASE=rx,CLICKHOUSE_PORT=8443,CLICKHOUSE_SECURE=true \
   --set-env-vars CLICKHOUSE_PASSWORD=PASTE_READONLY_PASSWORD
 ```
 → gives a URL like `https://pharma-mcp-xxxx.run.app`. Your MCP endpoint is that **+ `/mcp`**.
+
+**One-time setup before the deploy:**
+```bash
+# 1. install the gcloud CLI (macOS): https://cloud.google.com/sdk/docs/install
+# 2. log in + pick/create a project (billing must be enabled on it)
+gcloud auth login
+gcloud projects create pharma-trail-mcp --name="Pharma Trail MCP"   # or use an existing project
+gcloud config set project pharma-trail-mcp
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com
+# 3. (safety) set a budget alert so you're emailed long before any charge:
+#    Console → Billing → Budgets & alerts → Create budget → $1–5/month
+```
 
 ### Option 2 — Fly.io
 ```bash
