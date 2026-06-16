@@ -21,7 +21,7 @@ from collections import defaultdict
 
 csv.field_size_limit(1 << 24)
 DATA, OUT = "data", "data/web"
-OP_CSV = os.path.join(DATA, "op_gnrl_2023.csv")
+OP_CSV = os.environ.get("OP_CSV", os.path.join(DATA, "op_gnrl_2024.csv"))
 
 BRAND_KEYS = {"ELIQUIS": "Eliquis", "XARELTO": "Xarelto", "HUMIRA": "Humira", "OZEMPIC": "Ozempic"}
 _money = re.compile(r"[^0-9.\-]")

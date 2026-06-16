@@ -21,7 +21,7 @@ csv.field_size_limit(1 << 24)
 BRANDS = {"ELIQUIS", "XARELTO", "HUMIRA", "OZEMPIC"}   # metformin is control: no payments
 OP_CSV = os.environ.get("OP_CSV", "data/op_gnrl_2024.csv")
 YEAR = 2024
-BATCH = 50000
+BATCH = 25000
 
 NEEDED = {
     "npi":          "Covered_Recipient_NPI",
@@ -72,11 +72,30 @@ def main():
         if not os.environ.get(v):
             sys.exit(f"!! {v} missing (set in .env).")
 
-    c = clickhouse_connect.get_client(
-        host=os.environ["CH_HOST"], port=8443, secure=True,
-        username=os.environ["CH_USER"], password=os.environ["CH_PASSWORD"])
-    c.command("TRUNCATE TABLE IF EXISTS rx.payments_raw")
-    print("   truncated rx.payments_raw")
+    def mk():
+        return clickhouse_connect.get_client(
+            host=os.environ["CH_HOST"], port=8443, secure=True,
+            username=os.environ["CH_USER"], password=os.environ["CH_PASSWORD"],
+            connect_timeout=30, send_receive_timeout=300)
+    c = mk()
+    def ins(rows):
+        nonlocal c
+        import time as _t
+        for attempt in range(1, 6):
+            try:
+                c.insert("rx.payments_raw", rows, column_names=cols); return
+            except Exception as e:
+                print(f"   batch retry {attempt}: {str(e)[:45]} — reconnecting", flush=True)
+                _t.sleep(2 * attempt)
+                try: c = mk()
+                except Exception: pass
+        raise RuntimeError("payments batch failed after 5 retries")
+    if os.environ.get("APPEND") == "1":
+        c.command(f"ALTER TABLE rx.payments_raw DELETE WHERE program_year={YEAR}")
+        print(f"   APPEND mode: keeping other years, replacing program_year={YEAR}")
+    else:
+        c.command("TRUNCATE TABLE IF EXISTS rx.payments_raw")
+        print("   truncated rx.payments_raw")
 
     cols = ["npi","recipient_type","specialty","amount","nature","manufacturer",
             "drug1","drug2","drug3","drug4","drug5","program_year","payment_date"]
@@ -113,10 +132,10 @@ def main():
         ])
         kept += 1
         if len(batch) >= BATCH:
-            c.insert("rx.payments_raw", batch, column_names=cols)
+            ins(batch)
             batch = []
     if batch:
-        c.insert("rx.payments_raw", batch, column_names=cols)
+        ins(batch)
     f.close()
 
     total = c.query("SELECT count() FROM rx.payments_raw").result_rows[0][0]

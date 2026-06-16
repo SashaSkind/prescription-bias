@@ -39,7 +39,7 @@ export default function About() {
           <li>This is <b>observational</b>: it shows correlation, not proof that a payment changed any individual&apos;s decision. Causality likely runs both ways (companies also target high prescribers).</li>
           <li>Part D rows with fewer than 11 claims are suppressed by CMS, so some prescribing looks lower than reality.</li>
           <li>Specialty labels come straight from CMS and aren&apos;t normalized.</li>
-          <li>Data is program year 2023 (the latest year both datasets fully overlap at build time).</li>
+          <li>Data is program year 2024 (the latest year both datasets are published).</li>
         </ul>
       </Section>
     </div>

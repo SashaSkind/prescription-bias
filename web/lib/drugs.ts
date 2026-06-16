@@ -10,4 +10,4 @@ export const DRUG_META: Record<string, { label: string; generic: string; control
   Metformin: { label: "Metformin", generic: "generic diabetes drug — control (no payments)", control: true },
 };
 
-export const DATA_YEAR = 2023; // program year currently loaded
+export const DATA_YEAR = 2024; // program year currently loaded

@@ -143,7 +143,12 @@ def fetch_partd_filter(filt_key, filt_val, page=5000):
 
 def load_partd(c):
     print("\n== STEP 1: Part D ==")
-    c.command("TRUNCATE TABLE rx.partd_raw")
+    if os.environ.get("APPEND") == "1":
+        n = c.query(f"SELECT count() FROM rx.partd_raw WHERE year={YEAR}").result_rows[0][0]
+        if n: c.command(f"ALTER TABLE rx.partd_raw DELETE WHERE year={YEAR}")  # idempotent for this year only
+        print(f"   APPEND mode: keeping other years, replacing year={YEAR} ({n} old rows)")
+    else:
+        c.command("TRUNCATE TABLE rx.partd_raw")
     all_norm = []
     pulls = [("Brnd_Name", b, b) for b in BRANDED] + [("Gnrc_Name", CONTROL_GNRC, "Metformin")]
     for filt_key, filt_val, label in pulls:
