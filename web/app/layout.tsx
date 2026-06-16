@@ -28,7 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <footer style={{ borderTop: "1px solid var(--border)", padding: "18px 0" }}>
           <div className="container muted" style={{ fontSize: 12, lineHeight: 1.6 }}>
             Source: public CMS <b>Open Payments</b> (general payments) + <b>Medicare Part D Prescribers by Provider
-            and Drug</b>, program year 2023. This site shows <b>correlation, not proof</b> that any payment changed an
+            and Drug</b>, program year 2023. This site shows <b>correlation, not proof</b>{" "}that any payment changed an
             individual prescriber&apos;s decisions. Not medical or legal advice — talk to your own clinician.
           </div>
         </footer>
