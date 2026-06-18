@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pharma-trail": {
+      "type": "http",
+      "url": "https://pharma-mcp-1064429920602.us-central1.run.app/mcp"
+    }
+  }
+}
