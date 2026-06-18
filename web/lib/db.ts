@@ -28,18 +28,30 @@ export async function searchDoctors(q: string, limit = 20): Promise<DoctorRow[]>
     LIMIT ${limit}` ) as DoctorRow[];
 }
 
-export async function getDoctor(npi: number) {
+// Just the doctor row — the "known info" the page renders instantly (fast PK lookup).
+export async function getDoctorHeader(npi: number): Promise<DoctorRow | null> {
   const docs = (await sql`
     SELECT npi, name, specialty, city, state, total_pay, total_claims
     FROM doctors WHERE npi = ${npi}`) as DoctorRow[];
-  if (!docs.length) return null;
+  return docs[0] ?? null;
+}
+
+// The per-drug breakdown + manufacturers (the "stats" loaded behind a skeleton).
+export async function getDoctorDetail(npi: number) {
   const drugs = (await sql`
     SELECT drug_key, specialty, claims, cost, pay_amount, pay_count, peer_unpaid_avg, pct_vs_unpaid
     FROM doctor_drug WHERE npi = ${npi} ORDER BY pay_amount DESC, claims DESC`) as DrugRow[];
   const mfrs = (await sql`
     SELECT drug_key, manufacturer, amount FROM doctor_drug_mfr
     WHERE npi = ${npi} ORDER BY amount DESC`) as MfrRow[];
-  return { doctor: docs[0], drugs, manufacturers: mfrs };
+  return { drugs, manufacturers: mfrs };
+}
+
+export async function getDoctor(npi: number) {
+  const doctor = await getDoctorHeader(npi);
+  if (!doctor) return null;
+  const { drugs, manufacturers } = await getDoctorDetail(npi);
+  return { doctor, drugs, manufacturers };
 }
 
 // Other doctors in the same specialty who prescribe the same drug — least paid first.

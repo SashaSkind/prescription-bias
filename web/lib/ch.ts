@@ -81,3 +81,32 @@ export async function specialtiesForDrug(drug: string): Promise<string[]> {
   const json = (await rs.json()) as { data: { specialty: string }[] };
   return json.data.map((d) => d.specialty);
 }
+
+// Individual industry payment events for one doctor (for the scatter on the doctor page).
+// Uses the ClickHouse QUERY CACHE (10-min TTL, shared between users) so the first viewer
+// pays for the scan and everyone after — any user — gets it from cache.
+export type PaymentEvent = { date: string; amount: number; manufacturer: string; drug: string };
+export type DoctorPayments = { events: PaymentEvent[]; rows_read: number; elapsed_ms: number };
+
+export async function doctorPaymentEvents(npi: number): Promise<DoctorPayments> {
+  const query = `
+    SELECT toString(payment_date) AS date, amount, manufacturer,
+           arrayFirst(x -> upper(x) IN ('ELIQUIS','XARELTO','HUMIRA','OZEMPIC'),
+                      [drug1, drug2, drug3, drug4, drug5]) AS drug
+    FROM rx.payments_raw
+    WHERE npi = {npi:UInt64} AND amount > 0
+    ORDER BY payment_date
+    LIMIT 1000
+    SETTINGS use_query_cache = 1, query_cache_ttl = 600, query_cache_share_between_users = 1`;
+  const t0 = Date.now();
+  const rs = await client.query({ query, query_params: { npi }, format: "JSON" });
+  const json = (await rs.json()) as {
+    data: { date: string; amount: number; manufacturer: string; drug: string }[];
+    statistics?: { rows_read?: number; elapsed?: number };
+  };
+  return {
+    events: json.data.map((d) => ({ ...d, amount: Number(d.amount) })),
+    rows_read: json.statistics?.rows_read ?? 0,
+    elapsed_ms: json.statistics?.elapsed ? Math.round(json.statistics.elapsed * 1000) : Date.now() - t0,
+  };
+}
