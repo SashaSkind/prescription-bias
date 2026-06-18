@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pharma Trail — Payment Dose-Response (2024)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  body{background:#0b0f1a;color:#e6edf3;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:32px;max-width:980px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px} .sub{color:#8b98a9;margin:0 0 24px}
+  .card{background:#121829;border:1px solid #1f2a40;border-radius:14px;padding:20px 24px;margin-bottom:20px}
+  .note{color:#8b98a9;font-size:13px;margin-top:12px}
+  b{color:#fff}
+</style>
+</head>
+<body>
+  <h1>💊 Pharma Trail — Payment Dose-Response</h1>
+  <p class="sub">Avg Medicare Part D claims per prescriber, by drug-specific industry payment (program year 2024 · public CMS data · correlation, not causation).</p>
+  <div class="card"><canvas id="chart" height="150"></canvas>
+    <p class="note">More payment → more prescribing, for the branded drugs. <b>Metformin</b> (control) has only the $0 bar — it gets no payments. <b>Humira</b> stays flat. The <b>$1k–10k / $10k+</b> bars are tiny samples (Eliquis $10k+ = 3 prescribers) — noise, not signal.</p>
+  </div>
+<script>
+const BANDS=["$0","<$100","$100-1k","$1k-10k","$10k+"];
+// {drug: [avg per band], n per band} — straight from the MCP query
+const DATA={
+  Eliquis:  {avg:[75.4,149.0,241.2,451.8,517.0], n:[227991,31995,4271,26,3],   c:"#5b8cff"},
+  Xarelto:  {avg:[39.0,76.0,100.5,293.4,320.3],   n:[119528,12174,2372,132,85], c:"#a06bff"},
+  Ozempic:  {avg:[48.8,68.2,104.5,403.9,203.1],   n:[120098,37587,13166,300,40],c:"#ffce54"},
+  Humira:   {avg:[15.8,15.3,12.5,null,null],       n:[771,117,4,0,0],            c:"#ff7b7b"},
+  Metformin:{avg:[126.3,null,null,null,null],      n:[261272,0,0,0,0],           c:"#4dd599"},
+};
+new Chart(document.getElementById("chart"),{
+  type:"bar",
+  data:{labels:BANDS,datasets:Object.entries(DATA).map(([k,v])=>({label:k,data:v.avg,backgroundColor:v.c,_n:v.n}))},
+  options:{responsive:true,
+    plugins:{legend:{labels:{color:"#e6edf3"}},
+      tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y} avg claims (n=${c.dataset._n[c.dataIndex].toLocaleString()})`}}},
+    scales:{x:{ticks:{color:"#8b98a9"},title:{display:true,text:"Drug-specific payment received",color:"#8b98a9"}},
+            y:{ticks:{color:"#8b98a9"},title:{display:true,text:"Avg Part D claims / prescriber",color:"#8b98a9"}}}}
+});
+</script>
+</body>
+</html>
