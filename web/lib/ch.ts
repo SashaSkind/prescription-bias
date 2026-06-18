@@ -35,7 +35,8 @@ export async function explore(p: ExploreParams): Promise<ExploreResult> {
       AND r.clms >= {minClms:UInt32}
       AND ifNull(p.pay_amount, 0) >= {payMin:Float64}
       AND ifNull(p.pay_amount, 0) <= {payMax:Float64}
-    GROUP BY pay_band ORDER BY pay_band`;
+    GROUP BY pay_band ORDER BY pay_band
+    SETTINGS use_query_cache = 1, query_cache_ttl = 600, query_cache_share_between_users = 1`;
 
   const query_params = {
     drug: p.drug, spec: p.specialty ?? "", minClms: p.minClms ?? 0,
@@ -75,7 +76,8 @@ export async function specialtiesForDrug(drug: string): Promise<string[]> {
   const rs = await client.query({
     query: `SELECT specialty, count() c FROM rx.rx_by_npi_drug
             WHERE drug_key = {drug:String} AND specialty != ''
-            GROUP BY specialty ORDER BY c DESC LIMIT 40`,
+            GROUP BY specialty ORDER BY c DESC LIMIT 40
+            SETTINGS use_query_cache = 1, query_cache_ttl = 600, query_cache_share_between_users = 1`,
     query_params: { drug }, format: "JSON",
   });
   const json = (await rs.json()) as { data: { specialty: string }[] };
