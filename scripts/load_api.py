@@ -33,7 +33,8 @@ YEAR      = 2024
 DATA_DIR  = "data"
 
 # branded drugs match on Brnd_Name (Part D) / product cols (OP); metformin on Gnrc_Name only.
-BRANDED = ["Eliquis", "Xarelto", "Humira", "Ozempic"]
+BRANDED = ["Eliquis", "Xarelto", "Humira", "Ozempic",
+           "Jardiance", "Mounjaro", "Farxiga", "Dupixent", "Repatha"]
 CONTROL_GNRC = "Metformin Hcl"
 
 OP_DRUGCOLS = [f"name_of_drug_or_biological_or_device_or_medical_supply_{i}" for i in range(1, 6)]
@@ -116,15 +117,22 @@ def ensure_tables(c):
         ( drug_key String, brnd_name String, gnrc_name String,
           match_on Enum8('brand'=1,'generic'=2) ) ENGINE = MergeTree ORDER BY drug_key
     """)
-    if c.query("SELECT count() FROM rx.drug_map").result_rows[0][0] == 0:
-        c.insert("rx.drug_map",
-            [["Eliquis","ELIQUIS","APIXABAN","brand"],
-             ["Xarelto","XARELTO","RIVAROXABAN","brand"],
-             ["Humira","HUMIRA","ADALIMUMAB","brand"],
-             ["Ozempic","OZEMPIC","SEMAGLUTIDE","brand"],
-             ["Metformin","","METFORMIN HCL","generic"]],
-            column_names=["drug_key","brnd_name","gnrc_name","match_on"])
-        print("   seeded rx.drug_map (5 rows)")
+    # always refresh drug_map so adding drugs here propagates
+    c.command("TRUNCATE TABLE rx.drug_map")
+    rows = [["Eliquis","ELIQUIS","APIXABAN","brand"],
+            ["Xarelto","XARELTO","RIVAROXABAN","brand"],
+            ["Humira","HUMIRA","ADALIMUMAB","brand"],
+            ["Ozempic","OZEMPIC","SEMAGLUTIDE","brand"],
+            ["Jardiance","JARDIANCE","EMPAGLIFLOZIN","brand"],
+            ["Mounjaro","MOUNJARO","TIRZEPATIDE","brand"],
+            ["Farxiga","FARXIGA","DAPAGLIFLOZIN","brand"],
+            # Part D registers these under device-suffixed brands ("Dupixent Pen" etc.),
+            # so match Rx on generic; keep brnd_name for the Open Payments (brand) join.
+            ["Dupixent","DUPIXENT","DUPILUMAB","generic"],
+            ["Repatha","REPATHA","EVOLOCUMAB","generic"],
+            ["Metformin","","METFORMIN HCL","generic"]]
+    c.insert("rx.drug_map", rows, column_names=["drug_key","brnd_name","gnrc_name","match_on"])
+    print(f"   seeded rx.drug_map ({len(rows)} rows)")
 
 # ── STEP 1: Part D ────────────────────────────────────────────────────────────
 def fetch_partd_filter(filt_key, filt_val, page=5000):
@@ -150,7 +158,11 @@ def load_partd(c):
     else:
         c.command("TRUNCATE TABLE rx.partd_raw")
     all_norm = []
-    pulls = [("Brnd_Name", b, b) for b in BRANDED] + [("Gnrc_Name", CONTROL_GNRC, "Metformin")]
+    # Some branded drugs are registered in Part D only under device-suffixed brand names
+    # ("Dupixent Pen", "Repatha Syringe"), so pull them by generic name instead.
+    GENERIC_PULL = {"Dupixent": "Dupilumab", "Repatha": "Evolocumab"}
+    pulls = [(("Gnrc_Name", GENERIC_PULL[b], b) if b in GENERIC_PULL else ("Brnd_Name", b, b))
+             for b in BRANDED] + [("Gnrc_Name", CONTROL_GNRC, "Metformin")]
     for filt_key, filt_val, label in pulls:
         raw = fetch_partd_filter(filt_key, filt_val)
         print(f"   {label:10} filter[{filt_key}]={filt_val!r:14} -> {len(raw):>6} rows")

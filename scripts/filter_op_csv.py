@@ -18,7 +18,8 @@ import clickhouse_connect
 
 csv.field_size_limit(1 << 24)
 
-BRANDS = {"ELIQUIS", "XARELTO", "HUMIRA", "OZEMPIC"}   # metformin is control: no payments
+BRANDS = {"ELIQUIS", "XARELTO", "HUMIRA", "OZEMPIC",
+          "JARDIANCE", "MOUNJARO", "FARXIGA", "DUPIXENT", "REPATHA"}   # metformin is control: no payments
 OP_CSV = os.environ.get("OP_CSV", "data/op_gnrl_2024.csv")
 YEAR = 2024
 BATCH = 25000
@@ -144,7 +145,7 @@ def main():
     print("   by brand present:")
     for r in c.query("""
         SELECT brand, count() n, round(sum(amount)) paid FROM (
-          SELECT amount, arrayJoin(['ELIQUIS','XARELTO','HUMIRA','OZEMPIC']) brand,
+          SELECT amount, arrayJoin(['ELIQUIS','XARELTO','HUMIRA','OZEMPIC','JARDIANCE','MOUNJARO','FARXIGA','DUPIXENT','REPATHA']) brand,
                  arrayMap(x->upper(x),[drug1,drug2,drug3,drug4,drug5]) ds
           FROM rx.payments_raw)
         WHERE has(ds,brand) GROUP BY brand ORDER BY n DESC""").result_rows:

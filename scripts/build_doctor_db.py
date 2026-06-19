@@ -23,7 +23,9 @@ csv.field_size_limit(1 << 24)
 DATA, OUT = "data", "data/web"
 OP_CSV = os.environ.get("OP_CSV", os.path.join(DATA, "op_gnrl_2024.csv"))
 
-BRAND_KEYS = {"ELIQUIS": "Eliquis", "XARELTO": "Xarelto", "HUMIRA": "Humira", "OZEMPIC": "Ozempic"}
+BRAND_KEYS = {"ELIQUIS": "Eliquis", "XARELTO": "Xarelto", "HUMIRA": "Humira", "OZEMPIC": "Ozempic",
+              "JARDIANCE": "Jardiance", "MOUNJARO": "Mounjaro", "FARXIGA": "Farxiga",
+              "DUPIXENT": "Dupixent", "REPATHA": "Repatha"}
 _money = re.compile(r"[^0-9.\-]")
 
 def f(s):
@@ -37,10 +39,13 @@ def i(s):
     try: return int(float(s))
     except (ValueError, TypeError): return 0
 
+# Drugs matched on generic name (device-suffixed brands in Part D + the metformin control).
+GENERIC_KEYS = {"DUPILUMAB": "Dupixent", "EVOLOCUMAB": "Repatha", "METFORMIN HCL": "Metformin"}
+
 def partd_key(brnd, gnrc):
     bn = (brnd or "").upper(); gn = (gnrc or "").upper()
     if bn in BRAND_KEYS: return BRAND_KEYS[bn]
-    if gn == "METFORMIN HCL": return "Metformin"
+    if gn in GENERIC_KEYS: return GENERIC_KEYS[gn]
     return None
 
 def main():

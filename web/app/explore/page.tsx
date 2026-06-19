@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import ExploreChart from "../components/ExploreChart";
 
-const DRUGS = ["Eliquis", "Xarelto", "Ozempic", "Humira", "Metformin"];
+const DRUGS = ["Eliquis", "Xarelto", "Ozempic", "Humira", "Jardiance", "Mounjaro", "Farxiga", "Dupixent", "Repatha", "Metformin"];
 const PAY_MAX_OPTS = [
   { label: "any", v: 1e12 }, { label: "≤ $100", v: 100 },
   { label: "≤ $1k", v: 1000 }, { label: "≤ $10k", v: 10000 },
