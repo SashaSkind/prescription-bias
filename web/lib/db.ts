@@ -17,14 +17,28 @@ export type SimilarRow = {
   claims: number; pay_amount: number; pct_vs_unpaid: number | null;
 };
 
-// Name search (trigram index). Returns top matches by total payment.
+// Name search (trigram index). Ranked to help a person FIND their doctor:
+// name-relevance first (exact > starts-with > word/last-name starts-with > substring),
+// then actual prescribers (claims) ahead of payment-only records, then alphabetical.
+// Payment is NOT a sort key.
 export async function searchDoctors(q: string, limit = 20): Promise<DoctorRow[]> {
-  const term = `%${q.toLowerCase()}%`;
+  const ql = q.trim().toLowerCase();
+  const like = `%${ql}%`;                              // index-backed: matches anywhere
+  const rx = ql.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // escape regex metachars
+  const wholeWord = `\\m${rx}\\M`;                     // term as a whole word (e.g. last name "Smith")
+  const wordStart = `\\m${rx}`;                        // a word starts with the term ("Smitha")
   return (await sql`
     SELECT npi, name, specialty, city, state, total_pay, total_claims
     FROM doctors
-    WHERE lower(name) LIKE ${term}
-    ORDER BY total_pay DESC NULLS LAST
+    WHERE lower(name) LIKE ${like}
+    ORDER BY
+      CASE
+        WHEN lower(name) ~ ${wholeWord} THEN 0
+        WHEN lower(name) ~ ${wordStart} THEN 1
+        ELSE 2
+      END,
+      total_claims DESC NULLS LAST,
+      name
     LIMIT ${limit}` ) as DoctorRow[];
 }
 
