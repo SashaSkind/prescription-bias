@@ -82,7 +82,7 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {err && <div className="panel" style={{ padding: 16, color: "var(--paid)" }}>ClickHouse error: {err}<br /><span className="muted" style={{ fontSize: 13 }}>(The service may be idle/asleep — open the CH console once to wake it, or check the IP allow-list.)</span></div>}
+      {err && <div className="panel" style={{ padding: 16 }}>Couldn’t load the data just now.<br /><span className="muted" style={{ fontSize: 13 }}>The live query service may be waking up — give it a few seconds and try again.</span></div>}
 
       {res && !err && (
         <>

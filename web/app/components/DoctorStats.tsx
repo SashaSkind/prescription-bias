@@ -61,7 +61,7 @@ export default function DoctorStats({ npi, specialty }: { npi: number; specialty
         <div className="panel" style={{ padding: 18, marginBottom: 18 }}>
           <div style={{ fontWeight: 700 }}>Payment events ({payments.events.length})</div>
           <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-            Each dot is one industry payment. ⚡ {payments.rows_read.toLocaleString()} rows scanned in {payments.elapsed_ms} ms (ClickHouse, 10-min cache)
+            Each dot is one industry payment, by amount.
           </div>
           <PaymentScatter events={payments.events} />
         </div>
