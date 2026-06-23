@@ -11,7 +11,9 @@ export default function About() {
           <li><b>CMS Open Payments</b> — industry payments to clinicians (who paid whom, for which drug).</li>
           <li><b>Medicare Part D — Prescribers by Provider and Drug</b> — how much each clinician prescribed.</li>
         </ul>
-        We scope to five drugs: <b>Eliquis, Xarelto, Ozempic, Humira</b>, and <b>metformin</b> as a control.
+        We scope to <b>50 drugs</b> — the 49 most-promoted branded drugs that are actually prescribed at
+        retail (diabetes, immunology, psychiatry, cardiology, dermatology, migraine, respiratory, GI),
+        selected data-driven from the payments themselves — plus <b>metformin</b> as a zero-payment control.
       </Section>
 
       <Section title="The bias number">
@@ -22,16 +24,18 @@ export default function About() {
       </Section>
 
       <Section title="What the aggregate shows">
-        Across ~1.5M records, prescribing rises with payment size: paid physicians write roughly
-        <b> +40% to +64%</b> more of a drug than unpaid peers in the same specialty (p &lt; 0.001 for Eliquis,
-        Xarelto, Ozempic). See the <a className="accent" href="/explore">Explore</a> page.
+        Controlling for specialty, paid physicians prescribe more of a drug than their unpaid peers in
+        <b> 39 of the 49</b> branded drugs (p &lt; 0.001) — <b>up to +69%</b> for blood thinners, COPD
+        inhalers, and diabetes drugs (median around <b>+23%</b>). For ~10 drugs — mostly specialty
+        biologics — there&apos;s no significant effect. See the <a className="accent" href="/explore">Explore</a> page.
       </Section>
 
-      <Section title="Why metformin and Humira matter">
-        <b>Metformin</b> is a cheap generic with no real promotional payments — it&apos;s our control, and it shows
-        no effect (only a $0 bar). <b>Humira</b> is a specialty biologic whose prescribing is condition-locked; its
-        gap is flat and not significant. We keep both in on purpose — a method you can trust is one that also
-        reports where the effect <i>doesn&apos;t</i> appear.
+      <Section title="Why metformin and the flat drugs matter">
+        <b>Metformin</b> is a cheap generic with no promotional payments — it&apos;s our control, and it shows
+        no effect (only a $0 bar). And ~10 branded drugs (mostly <b>specialty biologics</b> like Stelara,
+        Tremfya, Skyrizi, prescribed by a handful of specialists for locked conditions) show a flat,
+        non-significant gap. We keep them in on purpose — a method you can trust is one that also reports
+        where the effect <i>doesn&apos;t</i> appear.
       </Section>
 
       <Section title="Honest limits">

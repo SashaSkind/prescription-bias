@@ -1,99 +1,77 @@
-# Prescription Bias — CMS Payments × Prescribing
+# Pharma Trail
 
-Do physicians who receive **drug-specific** industry payments prescribe **more of that same drug**?
-Two real federal datasets, one program year. The metformin row gets **zero** payment matches by
-design — that's the integrity check that our pipeline isn't just inventing a correlation.
+**Does your doctor prescribe a drug because it's best for you — or because they were paid to?**
 
-- **OLAP:** ClickHouse Cloud (the heavy joins/aggregations).
-- **OLTP:** Postgres `drug_review` watchlist → piped into ClickHouse (`review_events`).
-- **Notebook:** Hex (charts + significance test + NL→SQL).
+Pharma Trail links two public U.S. federal datasets — **CMS Open Payments** (industry payments to
+clinicians) and **Medicare Part D** (what they prescribe) — on prescriber NPI, across ~40M records,
+to test whether physicians paid for a drug prescribe more of it. Search any doctor, see their
+payments next to their prescribing, and explore the pattern across 50 drugs.
 
----
-
-## What you (human) do vs. what's scripted
-
-**Scripted here** (paste into the ClickHouse console / run locally): all SQL, the load + cast,
-sanity checks, Python significance test, Postgres schema, and the PG→CH pipe.
-
-**You do by hand:** account/credit setup, downloading the CSVs into `data/`, eyeballing headers,
-smell-testing results, and building the Hex notebook UI.
+🔗 **Live: [pharma-trail.vercel.app](https://pharma-trail.vercel.app)** · program year **2024** · public CMS data
 
 ---
 
-## Run order
+## The finding
 
-> Everything in `sql/` is written for the **ClickHouse SQL dialect** and is meant to be pasted into
-> the ClickHouse Cloud console (or run via `clickhouse-client`). Run top to bottom.
+Controlling for specialty (OLS, `log(claims) ~ paid + specialty`), paid physicians prescribe more
+of the drug they were paid for in **39 of 49 branded drugs (p < 0.001)** — **up to +69%** for blood
+thinners, COPD inhalers, and diabetes drugs (**median ≈ +23%**). For ~10 drugs — mostly specialty
+biologics prescribed by a handful of specialists — there's **no significant effect**, and the
+generic control (**metformin**) has **zero payments** by design. Reporting where the effect is
+*absent* is what makes the method trustworthy.
 
-1. **Drop the CSVs** into `data/`:
-   - `data/open_payments_general_YYYY.csv`  (Open Payments — General Payments Detail)
-   - `data/partd_provider_drug_YYYY.csv`    (Medicare Part D — by Provider and Drug)
-
-2. **Check the headers match the DDL** (do this before anything else):
-   ```bash
-   bash scripts/check_headers.sh
-   ```
-   This prints row 1 of each CSV and the columns we expect. Eyeball the diff. If a name is off,
-   tell me before we load — the loaders are positional/named and will silently mis-map otherwise.
-
-3. **Create raw tables + the drug lookup** — paste into ClickHouse console:
-   - `sql/01_create_raw.sql`
-   - `sql/02_drug_map.sql`
-
-4. **Load the data** (casts the dollar TEXT field → Float):
-   ```bash
-   bash scripts/load_clickhouse.sh
-   ```
-   ✅ Expect: `rx.payments_raw` and `rx.partd_raw` row counts in the millions; no all-zero NPIs.
-   The script prints counts after each load so you can smell-test.
-
-5. **Build scoped tables** — `sql/03_scoped_tables.sql`.
-   ✅ Expect: `rx.rx_by_npi_drug` has all **5** drug_keys; `rx.pay_by_npi_drug` has **4** (NOT metformin).
-
-6. **Run analyses** — `sql/04_analyses.sql`, then `scripts/sanity_check.sql`.
-   ✅ Expect: paid avg_claims ≥ unpaid for the 4 branded drugs; metformin gap ~flat.
-
-7. **Notebook** — `sql/05_per_npi_export.sql` feeds the Python cell. Everything paste-ready in
-   `hex/cells.md`. NL→SQL prompts in `hex/nl_questions.md`.
-
-8. **OLTP demo** — `postgres/watchlist.sql` (Postgres), then `scripts/seed_watchlist.py`
-   (ClickHouse outliers → Postgres), then `scripts/pipe_pg_to_ch.py` (Postgres changes → ClickHouse
-   `rx.review_events`, defined in `sql/06_review_events.sql`).
+> Observational data — correlation, not proof that any single payment changed a decision
+> (manufacturers also target high prescribers). Part D suppresses rows with < 11 claims.
 
 ---
 
-## Connection config
+## What it does
 
-Both shell and Python scripts read these env vars (set them once, e.g. in `.env` or your shell):
+- **Search** any US prescriber by name → ranked to find *your* doctor (name relevance + activity).
+- **Doctor page** → industry payments (by drug & manufacturer), prescribing vs. *unpaid* peers in
+  the same specialty, a live payment-events scatter, and lower-conflict alternatives.
+- **Explore** → live ad-hoc aggregation over ~1.8M prescriber-drug rows in ClickHouse (drag filters,
+  it recomputes in milliseconds).
+- **MCP** → connect any Claude (Desktop/Code/web) and query the dataset in plain English.
 
-```bash
-export CH_HOST="your-instance.clickhouse.cloud"
-export CH_PORT=9440           # native secure; use 8443 for HTTPS
-export CH_USER="default"
-export CH_PASSWORD="..."
-export CH_DATABASE="rx"
+## Architecture (hybrid OLAP + OLTP)
 
-export PG_DSN="postgresql://user:pass@host:5432/dbname"
+```
+                 Next.js (App Router) on Vercel
+        search / doctor pages │            │ /explore (live aggregation)
+                              ▼            ▼
+        Neon — serverless Postgres        ClickHouse — columnar OLAP
+        (OLTP: name search via pg_trgm,   (rx_by_npi_drug, pay_by_npi_drug,
+         per-doctor lookups, TanStack      payments_raw, doctors, drug_map)
+         Query cache)                            ▲
+                                                 │ also served by an MCP endpoint
+                                                 │ (Cloud Run + Neon Functions)
+        Python ETL ── filters full CMS files (8.9GB OP + 4GB Part D) ──┘
 ```
 
----
+- **ClickHouse = analytics at scale** (scan/aggregate millions of rows fast); **Neon = point
+  lookups + fuzzy search** (indexed). Right tool per query shape.
+- Drugs are selected **data-driven** (`scripts/select_drugs.py`): the most-promoted brands that are
+  also prescribed at retail, generics derived from Part D, matched by brand first-token (robust to
+  device-suffixed brands like "Dupixent Pen").
 
-## Target drugs (locked)
+## Data scale
+Part D `partd_raw` 1.96M rows · Open Payments `payments_raw` 5.94M · scoped `rx_by_npi_drug` 1.79M ·
+**642K doctors** · 50 drugs (49 branded + metformin control).
 
-| drug_key  | brand (`Brnd_Name` / OP product) | generic (`Gnrc_Name`) | match_on |
-|-----------|----------------------------------|-----------------------|----------|
-| Eliquis   | ELIQUIS                          | APIXABAN              | brand    |
-| Xarelto   | XARELTO                          | RIVAROXABAN           | brand    |
-| Humira    | HUMIRA                           | ADALIMUMAB            | brand    |
-| Ozempic   | OZEMPIC                          | SEMAGLUTIDE           | brand    |
-| Metformin | (none — control)                 | METFORMIN HCL         | generic  |
+## Stack
+Next.js 16 / React 19 / TypeScript / Tailwind / Recharts · **Neon** Postgres · **ClickHouse** ·
+TanStack Query · **MCP** (`@modelcontextprotocol/sdk`, Hono) · Python (pandas, statsmodels,
+clickhouse-connect, psycopg2) · Vercel + Google Cloud Run.
 
-Branded drugs match on **brand name**; metformin (control) matches on **generic**. The control
-gets zero payment rows on purpose.
+## Repo layout
+- `web/` — the Next.js app (deployed on Vercel)
+- `scripts/` — the Python ETL + analysis (`select_drugs`, `filter_partd_csv`, `filter_op_csv`,
+  `rebuild_scoped`, `build_doctor_db`, `load_neon`, `gen_drugs_ts`, the regression)
+- `mcp/` — public read-only MCP on Cloud Run · `neon-mcp/` — MCP as a Neon Function (TypeScript)
+- `sql/` — the ClickHouse DDL/analyses
+- Connection secrets live in `.env` (gitignored); `data/` (the multi-GB CMS files) is gitignored.
 
-## Fallback ladder (cut in this order if time runs short)
-
-1. Within-specialty control (5c) — drop first.
-2. ClickPipes CDC → use `scripts/pipe_pg_to_ch.py` instead.
-3. Ozempic — drop last.
-4. **Never cut:** dose-response chart (5b) + the metformin control. That's the demo.
+## Connect it to Claude (MCP)
+See **[mcp/README.md](mcp/README.md)** — add the public endpoint as a custom connector and ask the
+data questions in plain English.

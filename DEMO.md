@@ -1,15 +1,23 @@
-# Demo brief — Prescription Bias
+# Demo brief — Pharma Trail
 
-Everything to present. All numbers below are from the **real loaded 2023 data** — they match
-what your Hex cells produce.
+> **⚠️ CURRENT NUMBERS (2024, 50 drugs) — use these.** The project has since grown from the original
+> 5-drug hackathon scope to **50 drugs** (49 branded + metformin control), program year **2024**, and
+> a live app at **pharma-trail.vercel.app**. See **README.md** for the canonical state.
+>
+> **Headline finding:** within specialty, paid physicians prescribe more of the drug they were paid
+> for in **39 of 49 branded drugs (p < 0.001)** — **up to +69%** (blood thinners, COPD inhalers,
+> diabetes), **median ≈ +23%**. ~10 specialty biologics show no effect; **metformin** (control) has
+> zero payments. The detailed tables below are from the original **5-drug / 2023** version and are
+> kept for reference only.
 
 ---
 
-## The one-liner
+## The one-liner (current)
 
-> **Physicians who take drug-specific industry payments prescribe 40–64% more of that exact
-> drug — even compared to peers in the same specialty. Our zero-payment control drug
-> (metformin) proves the method isn't manufacturing the signal.**
+> **Across 50 drugs, physicians who took industry payments prescribed more of that drug — up to
+> +69%, holding within specialty (p < 0.001) — in 39 of them. For ~10 specialty biologics, no
+> effect; and the zero-payment control (metformin) stays flat. We report where it holds AND where
+> it doesn't.**
 
 ---
 
