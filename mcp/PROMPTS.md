@@ -5,7 +5,7 @@ enable **Artifacts** for charts, then paste any prompt below. Works in claude.ai
 Claude Code, or any LibreChat agent wired to the endpoint.
 
 **Schema (database `rx`, program year 2024):**
-- `doctors(npi, name, specialty, city, state, total_pay, total_claims)`
+- `doctors(npi, name, specialty, city, state, total_pay, total_claims)` — search by name with `positionCaseInsensitive(name,'smith')>0`
 - `rx_by_npi_drug(drug_key, npi, specialty, clms, drug_cst, benes)` — prescribing per doctor×drug
 - `pay_by_npi_drug(drug_key, npi, pay_amount, pay_count)` — payments per doctor×drug (no Metformin)
 - `payments_raw(npi, recipient_type, specialty, amount, manufacturer, drug1..5, payment_date, …)`

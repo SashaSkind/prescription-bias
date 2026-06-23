@@ -36,4 +36,6 @@ await rpc("notifications/initialized", {}, true);
 const tools = await rpc("tools/list", {});
 console.log("tools ->", (tools.json?.result?.tools ?? []).map((t: any) => t.name));
 const q = await rpc("tools/call", { name: "run_query", arguments: { query: "SELECT drug_key, count() n FROM rx.pay_by_npi_drug GROUP BY drug_key ORDER BY n DESC" } });
-console.log("run_query ->", JSON.stringify(q.json?.result?.content?.[0]?.text ?? q.json).slice(0, 320));
+console.log("run_query ->", JSON.stringify(q.json?.result?.content?.[0]?.text ?? q.json).slice(0, 200));
+const fd = await rpc("tools/call", { name: "find_doctor", arguments: { name: "john herre" } });
+console.log("find_doctor 'john herre' ->", JSON.stringify(fd.json?.result?.content?.[0]?.text ?? fd.json).slice(0, 320));

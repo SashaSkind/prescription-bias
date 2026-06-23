@@ -20,6 +20,9 @@ payments to physicians) with Medicare Part D prescribing, program year 2024, in 
 When the user asks a data question, run the SQL yourself with run_query (aggregate server-side),
 then VISUALIZE the result (chart/table artifact) without being asked. Prefer named results.
 
+To look up a specific doctor BY NAME (not just NPI), use the find_doctor tool (or query
+rx.doctors by name, e.g. WHERE positionCaseInsensitive(name,'smith')>0). NPI is the unique id.
+
 Schema (rx):
 - doctors(npi, name, specialty, city, state, total_pay, total_claims)
 - rx_by_npi_drug(drug_key, npi, specialty, clms, drug_cst, benes)   -- prescribing per doctor×drug
@@ -70,6 +73,26 @@ function buildServer(): McpServer {
         return { content: [{ type: "text", text: await chQuery(query) }] };
       } catch (e) {
         return { content: [{ type: "text", text: `Query error: ${(e as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "find_doctor",
+    {
+      description: "Find prescribers BY NAME (case-insensitive substring). Returns npi, specialty, " +
+        "city/state, total industry payments, and total claims — most active first.",
+      inputSchema: { name: z.string().describe("Doctor name or part of it, e.g. 'John Smith' or 'smith'") },
+    },
+    async ({ name }) => {
+      const q = name.replace(/'/g, "''");
+      const sql = `SELECT npi, name, specialty, city, state, round(total_pay) AS total_pay, total_claims
+        FROM rx.doctors WHERE positionCaseInsensitive(name, '${q}') > 0
+        ORDER BY total_claims DESC LIMIT 25`;
+      try {
+        return { content: [{ type: "text", text: await chQuery(sql) }] };
+      } catch (e) {
+        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
       }
     }
   );

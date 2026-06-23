@@ -14,6 +14,7 @@ CMS data** (Open Payments + Medicare Part D), program year **2024**.
 
 ## Database `rx`
 - `doctors(npi, name, specialty, city, state, total_pay, total_claims)` — prescriber identity.
+  **To find a doctor by NAME** (the usual case), search this table: `WHERE positionCaseInsensitive(name, 'john smith') > 0` (or `lower(name) LIKE '%smith%'`), order by `total_claims DESC`. NPI is the unique id, but users search by name.
 - `rx_by_npi_drug(drug_key, npi, specialty, clms, drug_cst, benes)` — prescribing per doctor×drug (pre-aggregated; use this, not raw).
 - `pay_by_npi_drug(drug_key, npi, pay_amount, pay_count)` — payments per doctor×drug (no Metformin).
 - `payments_raw(npi, recipient_type, specialty, amount, manufacturer, drug1..5, payment_date, …)` — raw payment events.
