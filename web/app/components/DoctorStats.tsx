@@ -72,18 +72,26 @@ export default function DoctorStats({ npi, specialty }: { npi: number; specialty
         <div style={{ fontWeight: 700, marginBottom: 4 }}>Prescribing vs unpaid peers (same specialty)</div>
         <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
           Medicare Part D claims for each drug, next to the average <i>unpaid</i> {specialty || "peer"}.
+          {paidDrugs.length === 0
+            ? " This prescriber took no payments for these drugs — the gaps below are prescribing volume vs peers, not a payment signal."
+            : " The 💵 / red flag marks drugs this prescriber was paid for; other rows are shown for context."}
         </div>
         {drugs.filter((d) => num(d.claims) > 0).map((d) => {
           const pct = d.pct_vs_unpaid == null ? null : Number(d.pct_vs_unpaid);
+          const paidForThis = num(d.pay_amount) > 0;
           return (
             <div key={d.drug_key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-              <span style={{ width: 90 }}><b>{d.drug_key}</b></span>
-              <span style={{ width: 120 }}>{num(d.claims).toLocaleString()} claims</span>
-              <span className="muted" style={{ width: 150, fontSize: 13 }}>peer avg {Math.round(num(d.peer_unpaid_avg))}</span>
+              <span style={{ width: 110 }}><b>{d.drug_key}</b>{paidForThis && <span title="paid for this drug"> 💵</span>}</span>
+              <span style={{ width: 116 }}>{num(d.claims).toLocaleString()} claims</span>
+              <span className="muted" style={{ width: 140, fontSize: 13 }}>peer avg {Math.round(num(d.peer_unpaid_avg))}</span>
               {pct != null && (
-                <span className={pct >= 0 ? "up" : "down"} style={{ fontWeight: 700 }}>
-                  {pct >= 0 ? "▲ +" : "▼ "}{pct}% vs unpaid
-                </span>
+                paidForThis ? (
+                  <span className={pct >= 0 ? "up" : "down"} style={{ fontWeight: 700 }}>
+                    {pct >= 0 ? "▲ +" : "▼ "}{pct}% vs unpaid · paid
+                  </span>
+                ) : (
+                  <span className="muted" style={{ fontSize: 13 }}>{pct >= 0 ? "+" : ""}{pct}% vs peers</span>
+                )
               )}
             </div>
           );
