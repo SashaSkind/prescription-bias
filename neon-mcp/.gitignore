@@ -1,3 +1,5 @@
 node_modules/
 .env.production
 .neon
+.neon_key
+.env.local
